@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WhatsApp Bot</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header>
+      <div class="logo">🤖 BotLogo</div>
+      <nav>
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">Features</a></li>
+          <li><a href="#">Docs</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-text">
+        <h1>Build a WhatsApp Bot with AI</h1>
+        <p>
+          Use ChatGPT to generate dynamic menus and send them via WhatsApp with
+          a few clicks.
+        </p>
+      </div>
+      <div class="hero-image">
+        <img
+          src="https://cdn.pixabay.com/photo/2020/11/03/12/12/chatbot-5713482_960_720.png"
+          alt="Bot Example"
+        />
+      </div>
+    </section>
+
+    <!-- Initialize Bot Section -->
+    <section class="init-bot">
+      <h2>Initialize Your WhatsApp Bot</h2>
+      <p>
+        Type a prompt to generate your bot's menu (e.g. "Create a menu for a
+        customer support bot").
+      </p>
+
+      <form id="promptForm">
+        <input
+          type="text"
+          name="prompt"
+          id="prompt"
+          placeholder="Enter your bot idea..."
+          required
+        />
+        <button type="submit">Generate Menu</button>
+      </form>
+
+      <div id="response" class="response-box" style="display: none">
+        <h3>Generated Menu:</h3>
+        <pre id="menuOutput"></pre>
+        <button id="confirmBtn">Use This Menu & Generate QR</button>
+      </div>
+    </section>
+
+    <script>
+      const form = document.getElementById("promptForm");
+      const menuOutput = document.getElementById("menuOutput");
+      const responseBox = document.getElementById("response");
+      const confirmBtn = document.getElementById("confirmBtn");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const prompt = document.getElementById("prompt").value;
+
+        const res = await fetch("/generate-menu", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        });
+
+        const data = await res.json();
+        menuOutput.textContent = data.menu || "No response from ChatGPT.";
+        responseBox.style.display = "block";
+      });
+
+      confirmBtn.addEventListener("click", async () => {
+        const menu = menuOutput.textContent;
+        const res = await fetch("/start-bot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ menu }),
+        });
+
+        const qr = await res.json();
+        alert("Bot starting... Scan the QR code in terminal or browser!");
+      });
+    </script>
+  </body>
+</html>

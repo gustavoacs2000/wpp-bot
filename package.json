@@ -1,0 +1,27 @@
+{
+  "name": "wpp-bot",
+  "version": "1.0.0",
+  "description": "A whatsapp bot server",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gustavoacs2000/wpp-bot.git"
+  },
+  "author": "gustavoacs2000",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gustavoacs2000/wpp-bot/issues"
+  },
+  "homepage": "https://github.com/gustavoacs2000/wpp-bot#readme",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "openai": "^4.92.1",
+    "venom-bot": "^4.2.1"
+  }
+}
