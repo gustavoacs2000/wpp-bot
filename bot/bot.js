@@ -1,61 +1,30 @@
-const venom = require("venom-bot");
+// import fs from "fs";
+// import { Selenium } from "./venom_bot.js";
 
-let clientInstance;
+// class CreateWppBot {
+//   constructor() {
+//     this.selenium = new Selenium();
+//   }
 
-function parseMenu(menuText) {
-  const options = [];
-  const lines = menuText.split("\n");
+//   async createBot() {
+//     try {
+//       await this.selenium.get_url("https://web.whatsapp.com/");
+//       await this.selenium.wait_ready_state();
 
-  for (const line of lines) {
-    const match = line.match(/^(\d+)[\)\.\-]?\s*(.*)/);
-    if (match) {
-      options.push({ key: match[1], text: match[2] });
-    }
-  }
+//       let qr_code_base64 = await this.selenium.build_screenshot_buffer64(
+//         "css",
+//         'canvas[aria-label="Scan this QR code to link a device!"]'
+//       );
 
-  return options;
-}
+//       fs.writeFileSync("qrcode.png", qr_code_base64, "base64");
+//       console.log(teste);
+//       // montar arquivo com base64
+//       await element.click();
+//     } catch (error) {
+//       console.error(error);
+//       console.error(error);
+//     }
+//   }
+// }
 
-async function startVenomBot(menuText) {
-  if (clientInstance) return; // Already running
-
-  const menuOptions = parseMenu(menuText);
-
-  venom
-    .create({
-      session: "whatsapp-bot",
-      multidevice: true,
-    })
-    .then((client) => {
-      clientInstance = client;
-
-      console.log("\n🤖 WhatsApp Bot is ready!");
-
-      client.onMessage((message) => {
-        if (message.isGroupMsg === false) {
-          const selectedOption = menuOptions.find(
-            (opt) => opt.key === message.body.trim()
-          );
-
-          if (selectedOption) {
-            client.sendText(
-              message.from,
-              `✅ You selected: ${selectedOption.text}`
-            );
-          } else {
-            let response = "*Please select an option:*\n";
-            menuOptions.forEach((opt) => {
-              response += `${opt.key}. ${opt.text}\n`;
-            });
-            client.sendText(message.from, response);
-          }
-        }
-      });
-    })
-    .catch((error) => {
-      console.error("❌ Error creating session:", error);
-      throw error;
-    });
-}
-
-module.exports = { startVenomBot };
+// export { CreateWppBot };

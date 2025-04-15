@@ -1,12 +1,34 @@
+// HTML + JavaScript (to be saved as a .ejs or .html file)
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>WhatsApp Bot</title>
     <link rel="stylesheet" href="/css/styles.css" />
+    <style>
+      .menu-option,
+      .nested-answers {
+        margin: 10px 0;
+        padding-left: 20px;
+        border-left: 2px solid #ccc;
+      }
+      .nested-input {
+        margin-top: 5px;
+        display: block;
+      }
+      .attachment-list {
+        margin-top: 10px;
+        font-size: 0.9em;
+      }
+      .attachment-item {
+        background: #f2f2f2;
+        margin-bottom: 4px;
+        padding: 4px 8px;
+        border-radius: 5px;
+      }
+    </style>
   </head>
   <body>
-    <!-- Header -->
     <header>
       <div class="logo">🤖 BotLogo</div>
       <nav>
@@ -18,7 +40,6 @@
       </nav>
     </header>
 
-    <!-- Hero Section -->
     <section class="hero">
       <div class="hero-text">
         <h1>Build a WhatsApp Bot with AI</h1>
@@ -35,15 +56,16 @@
       </div>
     </section>
 
-    <!-- Initialize Bot Section -->
     <section class="init-bot">
       <h2>Initialize Your WhatsApp Bot</h2>
-      <p>
-        Type a prompt to generate your bot's menu (e.g. "Create a menu for a
-        customer support bot").
-      </p>
-
       <form id="promptForm">
+        <input
+          type="email"
+          name="email"
+          id="email"
+          placeholder="Your email..."
+          required
+        />
         <input
           type="text"
           name="prompt"
@@ -57,41 +79,211 @@
       <div id="response" class="response-box" style="display: none">
         <h3>Generated Menu:</h3>
         <pre id="menuOutput"></pre>
+        <div id="menuForms"></div>
+        <button id="checkFlowBtn" style="margin-right: 10px">
+          Verificar Fluxo com ChatGPT
+        </button>
         <button id="confirmBtn">Use This Menu & Generate QR</button>
       </div>
     </section>
 
     <script>
-      const form = document.getElementById("promptForm");
-      const menuOutput = document.getElementById("menuOutput");
-      const responseBox = document.getElementById("response");
-      const confirmBtn = document.getElementById("confirmBtn");
+      document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("promptForm");
+        const menuOutput = document.getElementById("menuOutput");
+        const responseBox = document.getElementById("response");
+        const menuForms = document.getElementById("menuForms");
+        const confirmBtn = document.getElementById("confirmBtn");
+        const checkFlowBtn = document.getElementById("checkFlowBtn");
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const prompt = document.getElementById("prompt").value;
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const prompt = document.getElementById("prompt").value;
 
-        const res = await fetch("/generate-menu", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
+          const res = await fetch("/generate-menu", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt }),
+          });
+
+          const data = await res.json();
+          const rawMenu = data.menu || "No response from ChatGPT.";
+          menuOutput.textContent = rawMenu;
+          responseBox.style.display = "block";
+
+          renderFormsFromMenu(rawMenu);
         });
 
-        const data = await res.json();
-        menuOutput.textContent = data.menu || "No response from ChatGPT.";
-        responseBox.style.display = "block";
-      });
+        function renderFormsFromMenu(menuText) {
+          menuForms.innerHTML = "";
+          const lines = menuText
+            .split("\n")
+            .filter((line) => /^\d+\s*[-.]/.test(line.trim()));
 
-      confirmBtn.addEventListener("click", async () => {
-        const menu = menuOutput.textContent;
-        const res = await fetch("/start-bot", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ menu }),
+          lines.forEach((line) => {
+            const wrapper = document.createElement("div");
+            wrapper.classList.add("menu-option");
+            const form = createOptionForm(line.trim());
+            wrapper.appendChild(form);
+            menuForms.appendChild(wrapper);
+          });
+
+          updateNumbering();
+        }
+
+        function createOptionForm(value = "") {
+          const form = document.createElement("form");
+          form.classList.add("option-form");
+          const attachments = [];
+
+          form.innerHTML = `
+            <input type="text" name="option" value="${value}" required />
+            <input type="file" multiple class="file-input" />
+            <div class="attachment-list"></div>
+            <button type="button" class="addNested">Add Nested Answer</button>
+            <button type="button" class="removeOption">Remove</button>
+            <div class="nested-answers"></div>
+          `;
+
+          const inputFile = form.querySelector(".file-input");
+          const attachmentList = form.querySelector(".attachment-list");
+
+          inputFile.addEventListener("change", async (e) => {
+            const files = Array.from(e.target.files);
+            attachmentList.innerHTML = "";
+            attachments.length = 0;
+
+            for (const file of files) {
+              const base64 = await toBase64(file);
+              attachments.push({
+                name: file.name,
+                type: file.type,
+                content: base64,
+              });
+
+              const item = document.createElement("div");
+              item.classList.add("attachment-item");
+              item.innerText = `${file.name}`;
+              attachmentList.appendChild(item);
+            }
+          });
+
+          form.querySelector(".addNested").addEventListener("click", () => {
+            const nestedContainer = form.querySelector(".nested-answers");
+            const nestedWrapper = document.createElement("div");
+            nestedWrapper.classList.add("menu-option");
+            nestedWrapper.appendChild(createOptionForm());
+            nestedContainer.appendChild(nestedWrapper);
+            updateNumbering();
+          });
+
+          form.querySelector(".removeOption").addEventListener("click", () => {
+            const parent = form.closest(".menu-option");
+            if (parent) parent.remove();
+            updateNumbering();
+          });
+
+          form._getAttachments = () => attachments;
+
+          return form;
+        }
+
+        function toBase64(file) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (error) => reject(error);
+          });
+        }
+
+        function updateNumbering() {
+          function numberOptions(container, prefix = "") {
+            const optionWrappers = container.querySelectorAll(
+              ":scope > .menu-option"
+            );
+
+            optionWrappers.forEach((wrapper, index) => {
+              const form = wrapper.querySelector("form");
+              if (form) {
+                const input = form.querySelector("input[name='option']");
+                const label = `${prefix}${index + 1}`;
+                const currentText = input.value.replace(
+                  /^\d+([.-]\d+)*[.-]?\s*/,
+                  ""
+                );
+                input.value = `${label}. ${currentText}`;
+                const nested = form.querySelector(".nested-answers");
+                if (nested) numberOptions(nested, `${label}.`);
+              }
+            });
+          }
+
+          numberOptions(menuForms);
+        }
+
+        function extractFormData(formElement) {
+          const optionText = formElement.querySelector(
+            "input[name='option']"
+          ).value;
+          const nestedContainers = formElement.querySelectorAll(
+            ":scope > .nested-answers > .menu-option"
+          );
+          const nested = [];
+
+          nestedContainers.forEach((nestedWrapper) => {
+            const nestedForm = nestedWrapper.querySelector("form");
+            if (nestedForm) nested.push(extractFormData(nestedForm));
+          });
+
+          const attachments = formElement._getAttachments
+            ? formElement._getAttachments()
+            : [];
+
+          return { option: optionText, attachments, nested };
+        }
+
+        confirmBtn.addEventListener("click", async () => {
+          const email = document.getElementById("email").value;
+          const forms = document.querySelectorAll(
+            "#menuForms > .menu-option > .option-form"
+          );
+          const menuJson = [];
+
+          forms.forEach((form) => {
+            menuJson.push(extractFormData(form));
+          });
+
+          const res = await fetch("/start-bot", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, menu: menuJson }),
+          });
+
+          const qr = await res.json();
+          alert("Bot starting... Scan the QR code in terminal or browser!");
         });
 
-        const qr = await res.json();
-        alert("Bot starting... Scan the QR code in terminal or browser!");
+        checkFlowBtn.addEventListener("click", async () => {
+          const email = document.getElementById("email").value;
+          const forms = document.querySelectorAll(
+            "#menuForms > .menu-option > .option-form"
+          );
+          const menuJson = [];
+
+          forms.forEach((form) => {
+            menuJson.push(extractFormData(form));
+          });
+
+          const res = await fetch("/check-flow", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, menu: menuJson }),
+          });
+
+          const data = await res.json();
+          alert(`ChatGPT says: ${data.analysis}`);
+        });
       });
     </script>
   </body>
